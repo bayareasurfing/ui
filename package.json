@@ -1,11 +1,18 @@
 {
-  "name": "ui",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "local-qwen",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "author": "",
-  "license": "ISC"
+  "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.84",
+    "lucide": "^1.21.0"
+  },
+  "devDependencies": {
+    "vite": "^6.1.0"
+  }
 }
