@@ -657,15 +657,26 @@ async function ensureModel() {
   setSendState();
 
   state.loadingPromise = import("@mlc-ai/web-llm")
-    .then(({ CreateMLCEngine }) =>
-      CreateMLCEngine(state.activeModel.id, {
+    .then(async ({ CreateMLCEngine, hasModelInCache }) => {
+      const cached = await hasModelInCache(state.activeModel.id).catch(() => false);
+      state.isLoadingFromCache = cached;
+      if (cached) {
+        state.downloadedModelIds.add(state.activeModel.id);
+      } else {
+        state.downloadedModelIds.delete(state.activeModel.id);
+      }
+      state.progressText = cached ? `Loading ${state.activeModel.name}` : `Downloading ${state.activeModel.name}`;
+      persistModelState();
+      updateModelUi();
+
+      return CreateMLCEngine(state.activeModel.id, {
         initProgressCallback: (report) => {
           state.progress = report.progress * 100;
           state.progressText = report.text || `Loading ${state.activeModel.name}`;
           updateModelUi();
         },
-      }),
-    )
+      });
+    })
     .then((engine) => {
       state.engine = engine;
       state.engineModelId = state.activeModel.id;
