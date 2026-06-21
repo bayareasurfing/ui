@@ -156,6 +156,7 @@ const app = document.querySelector("#app");
 const state = {
   activeModel: modelOptions.find((model) => model.id === savedModelState.selectedModelId) || modelOptions[0],
   activeChatId: initialChat.id,
+  activeGeneration: null,
   chats: savedChatState.chats,
   context: initialChat.context,
   contextName: initialChat.contextName,
@@ -419,7 +420,6 @@ function renderChatList() {
     select.className = "chat-list-item";
     select.type = "button";
     select.dataset.chatId = chat.id;
-    select.disabled = state.isGenerating;
     select.setAttribute("aria-current", String(chat.id === state.activeChatId));
     select.innerHTML = '<i data-lucide="message-square"></i><span></span>';
     select.querySelector("span").textContent = chat.title;
@@ -447,6 +447,10 @@ function syncActiveChat() {
   chat.context = state.context;
   chat.contextName = state.contextName;
   chat.messages = state.messages;
+  syncChat(chat);
+}
+
+function syncChat(chat) {
   chat.title = getChatTitle(chat.messages);
   chat.updatedAt = Date.now();
   persistChats();
@@ -454,7 +458,6 @@ function syncActiveChat() {
 }
 
 function activateChat(chatId, shouldFocus = false) {
-  if (state.isGenerating) return;
   const chat = state.chats.find((item) => item.id === chatId);
   if (!chat) return;
 
@@ -473,7 +476,6 @@ function activateChat(chatId, shouldFocus = false) {
 }
 
 function createNewChat() {
-  if (state.isGenerating) return;
   const chat = createChat();
   state.chats.unshift(chat);
   activateChat(chat.id, true);
@@ -602,10 +604,14 @@ function renderMessages() {
   elements.messages.replaceChildren();
   elements.welcome.hidden = state.messages.length > 0;
   state.messages.forEach((message) => elements.messages.append(createMessage(message.role, message.content)));
+  if (state.activeGeneration?.chatId === state.activeChatId) {
+    renderStreamingMessage(state.activeGeneration.response, state.activeGeneration.chatId);
+  }
   elements.conversation.scrollTop = elements.conversation.scrollHeight;
 }
 
-function renderStreamingMessage(content) {
+function renderStreamingMessage(content, chatId = state.activeChatId) {
+  if (chatId !== state.activeChatId) return;
   let article = elements.messages.querySelector(".message-streaming");
   if (!article) {
     article = createMessage("assistant", "");
@@ -624,10 +630,7 @@ function setSendState() {
     : '<i data-lucide="send"></i>';
   elements.sendButton.title = state.isGenerating ? "Stop generating" : "Send message";
   elements.sendButton.setAttribute("aria-label", elements.sendButton.title);
-  elements.newChatButtons.forEach((button) => {
-    button.disabled = state.isGenerating;
-  });
-  elements.chatList.querySelectorAll("button").forEach((button) => {
+  elements.chatList.querySelectorAll("[data-delete-chat]").forEach((button) => {
     button.disabled = state.isGenerating;
   });
   updateIcons(elements.sendButton);
@@ -687,11 +690,11 @@ async function ensureModel() {
   return state.loadingPromise;
 }
 
-function buildChatMessages() {
-  const systemPrompt = state.context.trim()
-    ? `You are a concise, helpful assistant. Use the following user-provided reference context when it is relevant. If the answer is not in the context, say so plainly.\n\nREFERENCE CONTEXT:\n${state.context.slice(0, 7000)}`
+function buildChatMessages(chat) {
+  const systemPrompt = chat.context.trim()
+    ? `You are a concise, helpful assistant. Use the following user-provided reference context when it is relevant. If the answer is not in the context, say so plainly.\n\nREFERENCE CONTEXT:\n${chat.context.slice(0, 7000)}`
     : "You are a concise, helpful assistant running privately on the user's device.";
-  return [{ role: "system", content: systemPrompt }, ...state.messages];
+  return [{ role: "system", content: systemPrompt }, ...chat.messages];
 }
 
 async function sendMessage() {
@@ -703,20 +706,26 @@ async function sendMessage() {
   const prompt = elements.promptInput.value.trim();
   if (!prompt || state.isLoading) return;
 
+  const chatId = state.activeChatId;
+  const chat = getActiveChat();
+  if (!chat) return;
+
   state.messages.push({ role: "user", content: prompt });
   syncActiveChat();
   elements.promptInput.value = "";
   autoResizeInput();
   renderMessages();
   state.isGenerating = true;
+  state.activeGeneration = { chatId, response: "" };
+  const requestMessages = buildChatMessages(chat);
   setSendState();
 
   try {
     const engine = await ensureModel();
     let response = "";
-    renderStreamingMessage(response);
+    renderStreamingMessage(response, chatId);
     const chunks = await engine.chat.completions.create({
-      messages: buildChatMessages(),
+      messages: requestMessages,
       temperature: 0.7,
       max_tokens: 768,
       stream: true,
@@ -724,20 +733,22 @@ async function sendMessage() {
 
     for await (const chunk of chunks) {
       response += chunk.choices[0]?.delta?.content || "";
-      renderStreamingMessage(response);
+      state.activeGeneration.response = response;
+      renderStreamingMessage(response, chatId);
     }
 
-    state.messages.push({
+    chat.messages.push({
       role: "assistant",
       content: response.trim() || "I could not produce a response. Please try again.",
     });
   } catch (error) {
     const errorMessage = state.error || (error instanceof Error ? error.message : "Something went wrong while running the local model.");
-    state.messages.push({ role: "assistant", content: `Local model error: ${errorMessage}` });
+    chat.messages.push({ role: "assistant", content: `Local model error: ${errorMessage}` });
   } finally {
     state.isGenerating = false;
-    syncActiveChat();
-    renderMessages();
+    state.activeGeneration = null;
+    syncChat(chat);
+    if (state.activeChatId === chatId) renderMessages();
     updateModelUi();
     setSendState();
   }
