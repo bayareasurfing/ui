@@ -171,6 +171,7 @@ const state = {
   loadingPromise: null,
   messages: initialChat.messages,
   modelMenuOpen: false,
+  modelWorker: null,
   progress: 0,
   progressText: "Ready to download",
 };
@@ -657,7 +658,7 @@ async function ensureModel() {
   setSendState();
 
   state.loadingPromise = import("@mlc-ai/web-llm")
-    .then(async ({ CreateMLCEngine, hasModelInCache }) => {
+    .then(async ({ CreateWebWorkerMLCEngine, hasModelInCache }) => {
       const cached = await hasModelInCache(state.activeModel.id).catch(() => false);
       state.isLoadingFromCache = cached;
       if (cached) {
@@ -669,7 +670,10 @@ async function ensureModel() {
       persistModelState();
       updateModelUi();
 
-      return CreateMLCEngine(state.activeModel.id, {
+      const worker = new Worker(new URL("./model.worker.js", import.meta.url), { type: "module" });
+      state.modelWorker = worker;
+
+      return CreateWebWorkerMLCEngine(worker, state.activeModel.id, {
         initProgressCallback: (report) => {
           state.progress = report.progress * 100;
           state.progressText = report.text || `Loading ${state.activeModel.name}`;
@@ -687,6 +691,8 @@ async function ensureModel() {
       return engine;
     })
     .catch((error) => {
+      state.modelWorker?.terminate();
+      state.modelWorker = null;
       state.error = error instanceof Error ? error.message : "Unable to load the local model.";
       throw error;
     })
@@ -828,6 +834,8 @@ elements.modelOptions.forEach((option) => {
     }
     if (state.isGenerating || state.isLoading) return;
     if (state.engine) await state.engine.unload();
+    state.modelWorker?.terminate();
+    state.modelWorker = null;
     state.engine = null;
     state.engineModelId = "";
     state.activeModel = selected;
