@@ -526,6 +526,7 @@ function updateModelUi() {
   const loadingFromCache = loading && state.isLoadingFromCache;
   const ready = Boolean(state.engine && state.engineModelId === state.activeModel.id);
   const downloaded = state.downloadedModelIds.has(state.activeModel.id);
+  const needsDownload = !state.error && !ready && !downloaded;
   const canDownload = !state.error && !loading && !ready && !downloaded;
   elements.modelName.textContent = state.activeModel.name;
   elements.downloadNote.textContent = ready
@@ -555,9 +556,9 @@ function updateModelUi() {
   }
   updateIcons(elements.modelState);
 
-  elements.loadingStatus.hidden = !loading || loadingFromCache;
-  elements.loadingBar.style.width = `${Math.max(2, state.progress)}%`;
-  elements.loadingCopy.textContent = state.progressText;
+  elements.loadingStatus.hidden = !needsDownload || loadingFromCache;
+  elements.loadingBar.style.width = `${Math.max(2, loading ? state.progress : 0)}%`;
+  elements.loadingCopy.textContent = loading ? state.progressText : "Ready to download";
 }
 
 function toggleModelMenu(force) {
