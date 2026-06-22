@@ -527,22 +527,26 @@ function updateModelUi() {
   const ready = Boolean(state.engine && state.engineModelId === state.activeModel.id);
   const downloaded = state.downloadedModelIds.has(state.activeModel.id);
   const needsDownload = !state.error && !ready && !downloaded;
-  const canDownload = !state.error && !loading && !ready && !downloaded;
+  const canDownload = !loading && !ready && !downloaded;
   elements.modelName.textContent = state.activeModel.name;
-  elements.downloadNote.textContent = ready
-    ? `${state.activeModel.name} is ready and running on this device.`
-    : downloaded
-      ? `${state.activeModel.name} is downloaded locally.`
-      : `${state.activeModel.name} is a one-time ~${state.activeModel.size} browser download.`;
+  elements.downloadNote.textContent = state.error
+    ? state.error
+    : ready
+      ? `${state.activeModel.name} is ready and running on this device.`
+      : downloaded
+        ? `${state.activeModel.name} is downloaded locally.`
+        : `${state.activeModel.name} is a one-time ~${state.activeModel.size} browser download.`;
+  elements.downloadNote.classList.toggle("is-error", Boolean(state.error));
 
   elements.modelOptions.forEach((option) => {
     option.classList.toggle("selected", option.dataset.modelId === state.activeModel.id);
   });
   elements.modelState.classList.toggle("is-downloadable", canDownload);
   elements.modelState.disabled = !canDownload;
+  elements.modelState.title = state.error || (canDownload ? `Download ${state.activeModel.name}` : "");
 
   if (state.error) {
-    elements.modelState.innerHTML = `<i data-lucide="x"></i><span>Model unavailable</span>`;
+    elements.modelState.innerHTML = `<i data-lucide="x"></i><span class="model-state-copy">Model unavailable</span><span class="model-state-action">Retry model</span>`;
   } else if (loadingFromCache) {
     elements.modelState.innerHTML = `<i data-lucide="shield-check"></i><span>Loading locally</span>`;
   } else if (loading) {
