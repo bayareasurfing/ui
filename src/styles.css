@@ -193,7 +193,7 @@ input:focus-visible {
 
 .chat-list-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 31px;
+  grid-template-columns: minmax(0, 1fr) 28px;
   align-items: center;
   min-height: 38px;
   border: 1px solid transparent;
@@ -239,9 +239,11 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-.chat-delete {
-  width: 28px;
-  height: 28px;
+.chat-delete.icon-button {
+  width: 24px;
+  height: 24px;
+  justify-self: center;
+  border-radius: 5px;
   opacity: 0;
 }
 
