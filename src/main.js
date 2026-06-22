@@ -22,10 +22,46 @@ import "./styles.css";
 
 const modelOptions = [
   {
+    id: "Qwen3-0.6B-q4f16_1-MLC",
+    name: "Qwen3 0.6B",
+    size: "0.5 GB",
+    detail: "Fast and light",
+  },
+  {
+    id: "Qwen3-1.7B-q4f16_1-MLC",
+    name: "Qwen3 1.7B",
+    size: "1.1 GB",
+    detail: "More capable",
+  },
+  {
+    id: "Qwen3-4B-q4f16_1-MLC",
+    name: "Qwen3 4B",
+    size: "2.4 GB",
+    detail: "Powerful, needs ~4 GB VRAM",
+  },
+  {
+    id: "Qwen3-8B-q4f16_1-MLC",
+    name: "Qwen3 8B",
+    size: "4.7 GB",
+    detail: "Best quality, needs ~6 GB VRAM",
+  },
+  {
+    id: "Mistral-7B-Instruct-v0.3-q4f16_1-MLC",
+    name: "Mistral 7B Instruct",
+    size: "4.1 GB",
+    detail: "Strong general chat, needs ~5 GB VRAM",
+  },
+  {
     id: "DeepSeek-R1-Distill-Qwen-7B-q4f16_1-MLC",
     name: "DeepSeek R1 7B",
     size: "4.1 GB",
     detail: "Reasoning focused, needs ~6 GB VRAM",
+  },
+  {
+    id: "Llama-3.1-8B-Instruct-q4f16_1-MLC",
+    name: "Llama 3.1 8B",
+    size: "4.7 GB",
+    detail: "Versatile assistant, needs ~5 GB VRAM",
   },
   {
     id: "gemma-2-9b-it-q4f16_1-MLC",
@@ -180,7 +216,7 @@ app.innerHTML = `
         <div class="model-control">
           <button class="model-select" type="button" data-model-toggle aria-expanded="false">
             <span class="model-indicator"></span>
-            <span data-model-name>DeepSeek R1 7B</span>
+            <span data-model-name>Qwen3 0.6B</span>
             <i data-lucide="chevron-down"></i>
           </button>
           <div class="model-menu" data-model-menu hidden>
@@ -254,7 +290,7 @@ app.innerHTML = `
             </button>
           </div>
         </div>
-        <p class="download-note" data-download-note>DeepSeek R1 7B is a one-time ~4.1 GB browser download.</p>
+        <p class="download-note" data-download-note>Qwen3 0.6B is a one-time ~0.5 GB browser download.</p>
       </section>
     </section>
 
